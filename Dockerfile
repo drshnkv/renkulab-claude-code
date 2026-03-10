@@ -8,9 +8,11 @@ RUN curl -fsSL https://claude.ai/install.sh | bash
 # Ensure Claude Code is in PATH
 ENV PATH="/home/jovyan/.local/bin:${PATH}"
 
-# Disable JupyterLab token authentication (RenkuLab handles auth via its proxy)
-RUN mkdir -p /home/jovyan/.jupyter && \
-    echo "c.ServerApp.token = ''" >> /home/jovyan/.jupyter/jupyter_server_config.py && \
-    echo "c.ServerApp.password = ''" >> /home/jovyan/.jupyter/jupyter_server_config.py && \
-    echo "c.ServerApp.disable_check_xsrf = True" >> /home/jovyan/.jupyter/jupyter_server_config.py && \
-    echo "c.ServerApp.allow_remote_access = True" >> /home/jovyan/.jupyter/jupyter_server_config.py
+# Install jupyter-server-proxy (used by RenkuLab for routing)
+RUN pip install --no-cache-dir jupyter-server-proxy
+
+# Copy custom entrypoint that handles RenkuLab's RENKU_BASE_URL_PATH
+COPY --chown=${NB_UID}:${NB_GID} entrypoint.sh /entrypoint.sh
+
+ENTRYPOINT ["tini", "--", "/entrypoint.sh"]
+CMD ["jupyter", "server", "--ip", "0.0.0.0"]
